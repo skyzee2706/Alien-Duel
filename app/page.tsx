@@ -58,12 +58,17 @@ export default function Lobby() {
   const depositMutation = useMutation({
     mutationFn: async (val: string) => {
       impactOccurred('medium');
+      
+      // ALIEN Network uses 9 decimals (1 ALIEN = 1,000,000,000 units)
+      // We convert the whole token amount to atomic units (lamports/units)
+      const atomicAmount = (BigInt(val) * BigInt(1000000000)).toString();
+
       // Trigger the official Alien Wallet payment flow
       await pay({
-        amount: String(val),
+        amount: atomicAmount,
         token: 'ALIEN',
         network: 'alien',
-        invoice: `dep_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+        invoice: `dep${Date.now()}`, // Shorter alphanumeric invoice
         recipient: process.env.NEXT_PUBLIC_RECIPIENT_ADDRESS || '',
       });
       return { success: true };

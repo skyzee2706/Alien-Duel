@@ -177,11 +177,6 @@ export default function Profile() {
             {isEditing ? <Save className="w-4 h-4 text-blue-400" /> : <Edit2 className="w-4 h-4 text-white/40" />}
           </button>
         </div>
-
-        <div className="pt-4 border-t border-white/5">
-          <div className="text-[10px] font-bold uppercase text-white/40 mb-1">Alien Wallet Address</div>
-          <div className="text-[10px] font-mono text-white/60 truncate bg-white/5 p-2 rounded-lg">{profile?.alienId}</div>
-        </div>
       </div>
 
       {/* Transaction History */}
