@@ -11,7 +11,13 @@ import { eq, sql } from 'drizzle-orm';
 export async function POST(req: Request) {
   try {
     const payload = await req.json();
-    const { alienId, amount, paymentId, signature } = payload;
+    const { alienId, amount, paymentId, signature, appId } = payload;
+
+    // SECURITY: Ensure this payment is for THIS specific mini-app
+    if (appId !== process.env.NEXT_PUBLIC_ALIEN_APP_ID) {
+      console.warn(`🚨 Webhook Warning: Received payment for wrong appId: ${appId}`);
+      return NextResponse.json({ error: 'Wrong App ID' }, { status: 403 });
+    }
 
     // TODO: Verify signature from Alien Network using PUBLIC_KEY
     // if (!verifySignature(payload, signature)) return Error...
