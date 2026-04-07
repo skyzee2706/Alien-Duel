@@ -57,11 +57,11 @@ export default function RootLayout({
                 </div>
                 <span className="text-[10px] font-medium text-white/40 uppercase tracking-widest">History</span>
               </a>
-              <a href="/profile" className="flex flex-col items-center gap-1 group">
-                <div className="p-2 rounded-xl group-hover:bg-blue-500/10 transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white/40 group-hover:text-blue-400 transition-colors"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <a href="/history" className="flex flex-col items-center gap-1 group">
+                <div className="p-2 rounded-xl group-hover:bg-white/5 transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white/40"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 </div>
-                <span className="text-[10px] font-medium text-white/40 uppercase tracking-widest group-hover:text-blue-400 transition-colors">Profile</span>
+                <span className="text-[10px] font-medium text-white/40 uppercase tracking-widest">History</span>
               </a>
             </nav>
           </div>
