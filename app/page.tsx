@@ -62,7 +62,7 @@ export default function Lobby() {
       await pay({
         amount: String(val),
         token: 'ALIEN',
-        network: 'solana',
+        network: 'alien',
         invoice: `dep_${Date.now()}_${Math.random().toString(36).substring(7)}`,
         recipient: process.env.NEXT_PUBLIC_RECIPIENT_ADDRESS || '',
       });

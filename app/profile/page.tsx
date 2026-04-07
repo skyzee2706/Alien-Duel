@@ -98,6 +98,20 @@ export default function Profile() {
     }
   };
 
+  if (!authToken) {
+    return (
+      <div className="p-12 text-center space-y-4">
+        <div className="w-16 h-16 bg-blue-600/10 rounded-2xl flex items-center justify-center mx-auto">
+          <Wallet className="w-8 h-8 text-blue-400" />
+        </div>
+        <div className="text-xs font-black text-white/40 uppercase tracking-widest leading-relaxed">
+          Authentication Session Not Found <br /> 
+          Please reopen the Mini App.
+        </div>
+      </div>
+    );
+  }
+
   if (isProfileLoading) return <div className="p-12 text-center text-white/40 font-bold uppercase tracking-widest animate-pulse">Scanning Profile...</div>;
 
   return (
