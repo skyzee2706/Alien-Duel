@@ -21,16 +21,16 @@ export default function RootLayout({
       <body className={`${inter.className} ${outfit.className} bg-[#0a0a0c] text-white min-h-screen selection:bg-blue-500/30 overflow-x-hidden`}>
         <Providers>
           <div className="max-w-md mx-auto min-h-screen flex flex-col relative border-x border-white/5 bg-gradient-to-b from-[#0a0a0c] to-[#0d1321]">
-            <header className="px-4 py-4 flex items-center justify-between border-b border-white/5 sticky top-0 bg-[#0a0a0c]/80 backdrop-blur-md z-50">
-              <div className="flex items-center gap-1">
-                <div className="relative w-24 h-24 -my-10 -ml-4 flex-shrink-0 z-10">
+            <header className="px-4 py-3 flex items-center justify-between border-b border-white/5 sticky top-0 bg-[#0a0a0c]/80 backdrop-blur-md z-50">
+              <div className="flex items-center gap-2">
+                <div className="relative w-12 h-12 flex-shrink-0">
                   <img 
                     src="/AlienDuel.png" 
                     alt="Alien Duel Logo" 
-                    className="w-full h-full object-contain drop-shadow-[0_0_25px_rgba(37,99,235,0.8)]"
+                    className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(37,99,235,0.6)]"
                   />
                 </div>
-                <h1 className="text-xl font-black italic uppercase tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-white to-blue-600 leading-none -ml-2">
+                <h1 className="text-lg font-black italic uppercase tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-white to-blue-600 leading-none">
                   Alien Duel
                 </h1>
               </div>
