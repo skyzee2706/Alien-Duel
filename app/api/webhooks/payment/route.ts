@@ -1,88 +1,97 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { users, transactions } from '@/lib/db/schema';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import nacl from 'tweetnacl';
+import { db } from '@/lib/db';
+import { transactions, users } from '@/lib/db/schema';
 
-/**
- * 🔒 PRODUCTION-GRADE SECURE WEBHOOK
- * Verifies authenticity using Alien Network's Ed25519 signature.
- */
+type PaymentWebhookPayload = {
+  invoice?: string;
+  status?: string;
+  txHash?: string;
+};
+
+function verifyWebhookSignature(
+  body: string,
+  signatureHex: string,
+  publicKeyHex: string
+): boolean {
+  const message = new TextEncoder().encode(body);
+  const signature = Buffer.from(signatureHex, 'hex');
+  const publicKey = Buffer.from(publicKeyHex, 'hex');
+  return nacl.sign.detached.verify(message, signature, publicKey);
+}
+
 export async function POST(req: Request) {
+  const rawBody = await req.text();
+  const signatureHex = req.headers.get('x-webhook-signature') ?? '';
+
+  if (!signatureHex) {
+    return NextResponse.json({ error: 'Missing webhook signature' }, { status: 401 });
+  }
+
+  const webhookPublicKey = process.env.WEBHOOK_PUBLIC_KEY;
+  if (!webhookPublicKey) {
+    return NextResponse.json({ error: 'Webhook key is not configured' }, { status: 500 });
+  }
+
   try {
-    const rawBody = await req.text();
-    const payload = JSON.parse(rawBody);
-    const { alienId, amount, paymentId, signature, appId } = payload;
-
-    // 1. App ID Check
-    if (appId !== process.env.NEXT_PUBLIC_ALIEN_APP_ID) {
-      console.warn(`🚨 Security: Wrong App ID received: ${appId}`);
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const isValid = verifyWebhookSignature(rawBody, signatureHex, webhookPublicKey);
+    if (!isValid) {
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
-    // 2. CRYPTOGRAPHIC SIGNATURE VERIFICATION
-    // We check if this data really came from Alien Network.
-    const publicKey = process.env.WEBHOOK_PUBLIC_KEY;
-    if (publicKey && signature) {
-      try {
-        // Construct message (exactly as signed by Alien)
-        // Note: Alien signs the JSON body excluding the 'signature' field.
-        const msgObj = { ...payload };
-        delete msgObj.signature;
-        const message = new TextEncoder().encode(JSON.stringify(msgObj));
-        
-        const isVerified = nacl.sign.detached.verify(
-          message,
-          Buffer.from(signature, 'hex'),
-          Buffer.from(publicKey, 'hex')
-        );
+    const payload = JSON.parse(rawBody) as PaymentWebhookPayload;
+    const invoice = payload.invoice;
+    const status = payload.status;
 
-        if (!isVerified) {
-          console.error("🚨 Security: Invalid Webhook Signature!");
-          return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-        }
-      } catch (err) {
-        console.error("🚨 Security: Signature decoding failed", err);
-        return NextResponse.json({ error: 'Signature failure' }, { status: 401 });
-      }
+    if (!invoice || !status) {
+      return NextResponse.json({ error: 'Invalid webhook payload' }, { status: 400 });
     }
 
-    if (!alienId || !amount) {
-      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
-    }
-
-    // 3. Deduplication: Don't process the same payment twice
-    const [existingTx] = await db.select().from(transactions).where(eq(transactions.payoutId, paymentId)).limit(1);
-    if (existingTx) return NextResponse.json({ success: true, message: 'Existing' });
-
-    // 4. Atomic Balance Update
     await db.transaction(async (tx) => {
-      let [u] = await tx.select().from(users).where(eq(users.alienId, alienId)).limit(1);
-      
-      const targetUser = u || (await tx.insert(users).values({ 
-        alienId, 
-        username: `Alien_${alienId.substring(0, 4)}`,
-        balance: 0 
-      }).returning())[0];
+      const [depositTx] = await tx
+        .select()
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.payoutId, invoice),
+            eq(transactions.type, 'DEPOSIT')
+          )
+        )
+        .limit(1);
 
-      // Add balance
-      await tx.update(users)
-        .set({ balance: sql`${users.balance} + ${Number(amount)}` })
-        .where(eq(users.id, targetUser.id));
+      if (!depositTx) {
+        return;
+      }
 
-      // Record Deposit Transaction
-      await tx.insert(transactions).values({
-        userId: targetUser.id,
-        type: 'DEPOSIT',
-        amount: Number(amount),
-        status: 'COMPLETED',
-        payoutId: paymentId, 
-      });
+      if (status === 'finalized') {
+        if (depositTx.status === 'COMPLETED') {
+          return;
+        }
+
+        await tx
+          .update(transactions)
+          .set({ status: 'COMPLETED' })
+          .where(eq(transactions.id, depositTx.id));
+
+        await tx
+          .update(users)
+          .set({ balance: sql`${users.balance} + ${depositTx.amount}` })
+          .where(eq(users.id, depositTx.userId));
+        return;
+      }
+
+      if (status === 'failed' && depositTx.status !== 'COMPLETED') {
+        await tx
+          .update(transactions)
+          .set({ status: 'FAILED' })
+          .where(eq(transactions.id, depositTx.id));
+      }
     });
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('❌ Webhook error:', error);
+    console.error('Webhook processing failed:', error);
     return NextResponse.json({ error: 'Processing failed' }, { status: 500 });
   }
 }

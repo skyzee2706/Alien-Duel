@@ -1,28 +1,36 @@
+import { randomUUID } from 'crypto';
 import { NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { transactions } from '@/lib/db/schema';
 import { verifyAuth } from '@/lib/auth';
 
-/**
- * ⚠️ DEV-ONLY DEPOSIT ROUTE
- * In production, balance is credited via WEBHOOK (/api/webhooks/payment)
- * This route is now only used to simulate/log the start of a deposit.
- */
 export async function POST(req: Request) {
   try {
     const user = await verifyAuth(req);
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    const { amount } = await req.json();
-    
-    // In production, we don't credit balance here!
-    // We just return success to indicate the payment intent was captured.
-    console.log(`⏳ Payment Intent: ${user.alienId} wants to deposit ${amount}`);
-    
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Payment intent received. Balance will update via webhook confirmation.' 
+    const body = await req.json();
+    const amount = Number(body?.amount);
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return NextResponse.json({ error: 'Invalid deposit amount' }, { status: 400 });
+    }
+
+    const invoice = `dep_${randomUUID()}`;
+
+    await db.insert(transactions).values({
+      userId: user.id,
+      type: 'DEPOSIT',
+      amount,
+      status: 'PENDING',
+      payoutId: invoice,
     });
+
+    return NextResponse.json({ invoice });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: 'Process failed' }, { status: 500 });
+    console.error('Failed to create deposit intent:', error);
+    return NextResponse.json({ error: 'Failed to create deposit intent' }, { status: 500 });
   }
 }

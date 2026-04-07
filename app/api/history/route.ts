@@ -2,16 +2,11 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { challenges } from '@/lib/db/schema';
 import { or, eq, desc } from 'drizzle-orm';
-
-async function getAuthUser(req: Request) {
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader) return null;
-  return { alienId: authHeader.replace('Bearer ', '') };
-}
+import { verifyAuth } from '@/lib/auth';
 
 export async function GET(req: Request) {
   try {
-    const user = await getAuthUser(req);
+    const user = await verifyAuth(req);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const list = await db.select()

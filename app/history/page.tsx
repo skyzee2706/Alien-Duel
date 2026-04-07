@@ -3,7 +3,7 @@
 import { useAlien } from '@alien-id/miniapps-react';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, Trophy, ChevronRight, Hash, Dice6, Skull, Medal } from 'lucide-react';
+import { Clock, Trophy, Skull, Medal } from 'lucide-react';
 import Link from 'next/link';
 
 interface Challenge {
@@ -21,10 +21,24 @@ interface Challenge {
 
 export default function History() {
   const { authToken } = useAlien();
-  const myAddress = authToken?.replace('Bearer ', '');
+
+  const { data: profile } = useQuery<{ alienId: string }>({
+    queryKey: ['profile', authToken],
+    queryFn: async () => {
+      if (!authToken) throw new Error('Missing auth token');
+      const res = await fetch('/api/profile', {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      if (!res.ok) throw new Error('Failed to load profile');
+      return res.json();
+    },
+    enabled: !!authToken,
+  });
+
+  const myAddress = profile?.alienId;
 
   const { data: history, isLoading } = useQuery<Challenge[]>({
-    queryKey: ['history', myAddress],
+    queryKey: ['history', myAddress, authToken],
     queryFn: async () => {
       if (!authToken) return [];
       const res = await fetch('/api/history', {

@@ -3,9 +3,10 @@
 import { useAlien, useHaptic, usePayment } from '@alien-id/miniapps-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Dice6, Trophy, Users, Zap, Clock, ChevronRight, Wallet, ArrowDownLeft, ArrowUpRight, History, Loader2, Plus } from 'lucide-react';
+import { Dice6, Trophy, Users, Zap, ChevronRight, Wallet, ArrowDownLeft, ArrowUpRight, History, Loader2, Plus } from 'lucide-react';
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface Challenge {
   id: string;
@@ -16,10 +17,23 @@ interface Challenge {
   createdAt: string;
 }
 
+interface UserProfile {
+  id: string;
+  alienId: string;
+  balance: number;
+}
+
+interface Transaction {
+  id: string;
+  type: string;
+  amount: number;
+  createdAt: string;
+}
+
 export default function Lobby() {
   const { authToken } = useAlien();
   const { impactOccurred, notificationOccurred } = useHaptic();
-  const { pay } = usePayment();
+  const { pay, supported: isPaymentSupported } = usePayment();
   const queryClient = useQueryClient();
 
   const [isDepositOpen, setIsDepositOpen] = useState(false);
@@ -44,7 +58,7 @@ export default function Lobby() {
     refetchInterval: 10000,
   });
 
-  const { data: profile } = useQuery({
+  const { data: profile } = useQuery<UserProfile | null>({
     queryKey: ['profile', authToken],
     queryFn: async () => {
       if (!authToken) return null;
@@ -56,7 +70,7 @@ export default function Lobby() {
     enabled: !!authToken,
   });
 
-  const { data: transactions } = useQuery({
+  const { data: transactions } = useQuery<Transaction[] | null>({
     queryKey: ['transactions', authToken],
     queryFn: async () => {
       if (!authToken) return null;
@@ -71,26 +85,47 @@ export default function Lobby() {
   const depositMutation = useMutation({
     mutationFn: async (val: string) => {
       impactOccurred('medium');
-      
-      // Robust decimal handling for Alien Mainnet (9 decimals)
+
       const numericAmount = parseFloat(val);
       if (isNaN(numericAmount) || numericAmount <= 0) throw new Error("Invalid amount");
       const atomicAmount = (BigInt(Math.floor(numericAmount * 1000000)) * BigInt(1000)).toString();
+      if (!authToken) throw new Error('Missing auth token');
+      if (!isPaymentSupported) throw new Error('Payments are not supported in this environment');
+
+      const intentRes = await fetch('/api/deposit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ amount: numericAmount }),
+      });
+
+      const intent = await intentRes.json();
+      if (!intentRes.ok || !intent?.invoice) {
+        throw new Error(intent?.error || 'Failed to create invoice');
+      }
 
       await pay({
         amount: atomicAmount,
         token: 'ALIEN',
         network: 'alien',
-        invoice: `dep${Date.now()}`,
+        invoice: intent.invoice,
         recipient: process.env.NEXT_PUBLIC_RECIPIENT_ADDRESS || '',
       });
       return { success: true };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
       setIsDepositOpen(false);
       notificationOccurred('success');
-    }
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Deposit failed';
+      alert(message);
+      notificationOccurred('error');
+    },
   });
 
   const withdrawMutation = useMutation({
@@ -114,16 +149,12 @@ export default function Lobby() {
       setIsWithdrawOpen(false);
       notificationOccurred('success');
     },
-    onError: (err: any) => {
-      alert(err.message);
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Withdraw failed';
+      alert(message);
       notificationOccurred('error');
     }
   });
-
-  const handleAmountClick = (val: string) => {
-    setAmount(val);
-    impactOccurred('light');
-  };
 
   return (
     <div className="space-y-6 pb-24">
@@ -141,9 +172,9 @@ export default function Lobby() {
           </div>
           <motion.div 
             whileHover={{ rotate: 5, scale: 1.1 }}
-            className="w-16 h-16 drop-shadow-[0_10px_30px_rgba(37,99,235,0.4)]"
+            className="relative w-16 h-16 drop-shadow-[0_10px_30px_rgba(37,99,235,0.4)]"
           >
-             <img src="/AlienDuel.png" alt="Alien Duel" className="w-full h-full object-contain" />
+             <Image src="/AlienDuel.png" alt="Alien Duel" fill sizes="64px" className="object-contain" />
           </motion.div>
         </div>
         
@@ -277,7 +308,7 @@ export default function Lobby() {
         </div>
 
         <div className="space-y-2">
-          {transactions?.slice(0, 5).map((tx: any) => (
+          {transactions?.slice(0, 5).map((tx) => (
             <div key={tx.id} className="p-4 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${

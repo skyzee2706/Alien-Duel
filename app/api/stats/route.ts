@@ -12,9 +12,6 @@ export async function GET() {
     
     // Simulating "Online" as a percentage of total users + some random activity
     // To make it look "real", we can count the total number of challenges created in the last hour
-    const now = new Date();
-    const fifteenMinsAgo = new Date(now.getTime() - 15 * 60 * 1000);
-    
     // Actually, let's just count how many users exist for now.
     // If there are 0 users, show a base number.
     const userCount = totalUsers[0]?.count || 0;

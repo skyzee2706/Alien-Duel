@@ -3,34 +3,51 @@
 import { useAlien, useHaptic } from '@alien-id/miniapps-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Dice6, Trophy, Loader2, Zap, AlertCircle, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 
+interface Challenge {
+  id: string;
+  gameType: string;
+  betAmount: number;
+}
+
+interface JoinResult {
+  success: boolean;
+  winner: string;
+}
+
+interface UserProfile {
+  alienId: string;
+  balance: number;
+}
+
 export default function JoinChallenge() {
   const { id } = useParams();
+  const challengeId = typeof id === 'string' ? id : Array.isArray(id) ? id[0] : '';
   const router = useRouter();
   const queryClient = useQueryClient();
   const { authToken } = useAlien();
   const { impactOccurred, notificationOccurred } = useHaptic();
 
   const [isJoining, setIsJoining] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<JoinResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showAnimation, setShowAnimation] = useState(false);
 
-  const { data: challenge, isLoading: isChallengeLoading } = useQuery({
-    queryKey: ['challenge', id],
+  const { data: challenge, isLoading: isChallengeLoading } = useQuery<Challenge | undefined>({
+    queryKey: ['challenge', challengeId],
     queryFn: async () => {
       const res = await fetch(`/api/challenges`);
-      const all = await res.json();
-      return all.find((c: any) => c.id === id);
+      const all = (await res.json()) as Challenge[];
+      return all.find((c) => c.id === challengeId);
     },
-    enabled: !!id,
+    enabled: Boolean(challengeId),
   });
 
-  const { data: profile } = useQuery({
+  const { data: profile } = useQuery<UserProfile>({
     queryKey: ['profile', authToken],
     queryFn: async () => {
       const res = await fetch('/api/profile', {
@@ -46,6 +63,10 @@ export default function JoinChallenge() {
       setError('Alien Wallet not connected');
       return;
     }
+    if (!challenge) {
+      setError('Challenge not found');
+      return;
+    }
 
     if (!profile || profile.balance < challenge.betAmount) {
       setError('Insufficient balance. Please deposit first.');
@@ -58,7 +79,7 @@ export default function JoinChallenge() {
       impactOccurred('medium');
 
       // 1. Trigger Join & Resolution
-      const res = await fetch(`/api/challenges/${id}/join`, {
+      const res = await fetch(`/api/challenges/${challengeId}/join`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -76,10 +97,10 @@ export default function JoinChallenge() {
         setShowAnimation(false);
         setIsJoining(false);
         queryClient.invalidateQueries({ queryKey: ['profile'] });
-        notificationOccurred(data.winner === authToken ? 'success' : 'error');
+        notificationOccurred(data.winner === profile?.alienId ? 'success' : 'error');
       }, 3000);
-    } catch (err: any) {
-      setError(err.message || 'Something went wrong');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Something went wrong');
       setIsJoining(false);
     }
   };
@@ -87,7 +108,7 @@ export default function JoinChallenge() {
   if (isChallengeLoading) return <div className="p-12 text-center text-white/40 font-bold uppercase tracking-widest animate-pulse">Loading Battle...</div>;
   if (!challenge) return <div className="p-12 text-center text-white/40 font-bold uppercase tracking-widest">Challenge not found</div>;
 
-  const isWinner = result?.winner === authToken;
+  const isWinner = result?.winner === profile?.alienId;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
