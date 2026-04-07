@@ -68,6 +68,8 @@ export default function Lobby() {
       return res.json();
     },
     enabled: !!authToken,
+    refetchInterval: authToken ? 5000 : false,
+    refetchIntervalInBackground: true,
   });
 
   const { data: transactions } = useQuery<Transaction[] | null>({
@@ -80,6 +82,8 @@ export default function Lobby() {
       return res.json();
     },
     enabled: !!authToken,
+    refetchInterval: authToken ? 5000 : false,
+    refetchIntervalInBackground: true,
   });
 
   const depositMutation = useMutation({
