@@ -1,6 +1,6 @@
 'use client';
 
-import { useAlien, useHaptic } from '@alien-id/miniapps-react';
+import { useAlien, useHaptic, usePayment } from '@alien-id/miniapps-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Dice6, Trophy, Users, Zap, Clock, ChevronRight, Wallet, ArrowDownLeft, Loader2, Plus } from 'lucide-react';
@@ -19,6 +19,7 @@ interface Challenge {
 export default function Lobby() {
   const { authToken } = useAlien();
   const { impactOccurred, notificationOccurred } = useHaptic();
+  const { pay } = usePayment();
   const queryClient = useQueryClient();
 
   const [isDepositOpen, setIsDepositOpen] = useState(false);
@@ -57,21 +58,21 @@ export default function Lobby() {
   const depositMutation = useMutation({
     mutationFn: async (val: string) => {
       impactOccurred('medium');
-      const res = await fetch('/api/deposit', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`,
-        },
-        body: JSON.stringify({ amount: val }),
+      // Trigger the official Alien Wallet payment flow
+      await pay({
+        amount: String(val),
+        token: 'ALIEN',
+        network: 'solana',
+        invoice: `dep_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+        recipient: process.env.NEXT_PUBLIC_RECIPIENT_ADDRESS || '',
       });
-      return res.json();
+      return { success: true };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile'] });
       setIsDepositOpen(false);
       notificationOccurred('success');
-      // Balance updates via Webhook in production
+      // Balance updates automatically via Webhook after confirmation
     }
   });
 
