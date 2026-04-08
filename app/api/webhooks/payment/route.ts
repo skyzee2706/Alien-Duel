@@ -143,6 +143,9 @@ export async function POST(req: Request) {
             .where(eq(transactions.id, depositTx.id));
           console.log('Deposit marked failed from invoice webhook:', { invoice, status });
         }
+        if (!SUCCESS_STATUSES.has(status) && !FAILED_STATUSES.has(status)) {
+          console.warn('Deposit webhook received unknown status:', { invoice, status });
+        }
         return;
       }
 
