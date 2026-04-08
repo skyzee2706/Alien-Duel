@@ -14,8 +14,29 @@ type PaymentWebhookPayload = {
   appId?: string;
 };
 
+const SUCCESS_STATUSES = new Set([
+  'completed',
+  'confirmed',
+  'finalized',
+  'paid',
+  'settled',
+  'success',
+  'succeeded',
+]);
+
+const FAILED_STATUSES = new Set([
+  'cancelled',
+  'canceled',
+  'failed',
+  'rejected',
+]);
+
 function isHex(input: string, length: number): boolean {
   return new RegExp(`^[0-9a-fA-F]{${length}}$`).test(input);
+}
+
+function normalizeStatus(status: string | undefined): string {
+  return (status ?? '').trim().toLowerCase();
 }
 
 function verifyWebhookSignature(
@@ -53,10 +74,17 @@ export async function POST(req: Request) {
     }
 
     const payload = JSON.parse(rawBody) as PaymentWebhookPayload;
+    const normalizedStatus = normalizeStatus(payload.status);
     console.log('Payment webhook received with keys:', Object.keys(payload));
+    console.log('Payment webhook payload summary:', {
+      invoice: payload.invoice ?? null,
+      status: normalizedStatus || null,
+      txHash: payload.txHash ?? null,
+      test: 'test' in payload,
+    });
 
     const invoice = payload.invoice;
-    const status = payload.status;
+    const status = normalizedStatus;
     const legacyPaymentId = payload.paymentId;
     const legacyAlienId = payload.alienId;
 
@@ -81,11 +109,13 @@ export async function POST(req: Request) {
           .get();
 
         if (!depositTx) {
+          console.warn('Deposit webhook ignored because pending invoice was not found:', invoice);
           return;
         }
 
-        if (status === 'finalized') {
+        if (SUCCESS_STATUSES.has(status)) {
           if (depositTx.status === 'COMPLETED') {
+            console.log('Deposit webhook ignored because invoice is already completed:', invoice);
             return;
           }
 
@@ -98,14 +128,20 @@ export async function POST(req: Request) {
             .update(users)
             .set({ balance: sql`${users.balance} + ${depositTx.amount}` })
             .where(eq(users.id, depositTx.userId));
+          console.log('Deposit balance credited from invoice webhook:', {
+            invoice,
+            amount: depositTx.amount,
+            userId: depositTx.userId,
+          });
           return;
         }
 
-        if (status === 'failed' && depositTx.status !== 'COMPLETED') {
+        if (FAILED_STATUSES.has(status) && depositTx.status !== 'COMPLETED') {
           tx
             .update(transactions)
             .set({ status: 'FAILED' })
             .where(eq(transactions.id, depositTx.id));
+          console.log('Deposit marked failed from invoice webhook:', { invoice, status });
         }
         return;
       }
@@ -153,6 +189,10 @@ export async function POST(req: Request) {
         .get();
 
       if (!pendingDeposit) {
+        console.warn('Legacy deposit webhook ignored because no pending deposit was found:', {
+          legacyAlienId,
+          legacyPaymentId,
+        });
         return;
       }
 
@@ -165,6 +205,11 @@ export async function POST(req: Request) {
         .update(users)
         .set({ balance: sql`${users.balance} + ${pendingDeposit.amount}` })
         .where(eq(users.id, pendingDeposit.userId));
+      console.log('Deposit balance credited from legacy webhook:', {
+        legacyPaymentId,
+        amount: pendingDeposit.amount,
+        userId: pendingDeposit.userId,
+      });
     });
 
     return NextResponse.json({ success: true });
