@@ -122,12 +122,14 @@ export async function POST(req: Request) {
           tx
             .update(transactions)
             .set({ status: 'COMPLETED' })
-            .where(eq(transactions.id, depositTx.id));
+            .where(eq(transactions.id, depositTx.id))
+            .run();
 
           tx
             .update(users)
             .set({ balance: sql`${users.balance} + ${depositTx.amount}` })
-            .where(eq(users.id, depositTx.userId));
+            .where(eq(users.id, depositTx.userId))
+            .run();
           console.log('Deposit balance credited from invoice webhook:', {
             invoice,
             amount: depositTx.amount,
@@ -140,7 +142,8 @@ export async function POST(req: Request) {
           tx
             .update(transactions)
             .set({ status: 'FAILED' })
-            .where(eq(transactions.id, depositTx.id));
+            .where(eq(transactions.id, depositTx.id))
+            .run();
           console.log('Deposit marked failed from invoice webhook:', { invoice, status });
         }
         if (!SUCCESS_STATUSES.has(status) && !FAILED_STATUSES.has(status)) {
@@ -202,12 +205,14 @@ export async function POST(req: Request) {
       tx
         .update(transactions)
         .set({ status: 'COMPLETED', payoutId: legacyPaymentId })
-        .where(eq(transactions.id, pendingDeposit.id));
+        .where(eq(transactions.id, pendingDeposit.id))
+        .run();
 
       tx
         .update(users)
         .set({ balance: sql`${users.balance} + ${pendingDeposit.amount}` })
-        .where(eq(users.id, pendingDeposit.userId));
+        .where(eq(users.id, pendingDeposit.userId))
+        .run();
       console.log('Deposit balance credited from legacy webhook:', {
         legacyPaymentId,
         amount: pendingDeposit.amount,

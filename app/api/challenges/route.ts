@@ -35,14 +35,15 @@ export async function POST(req: Request) {
     const challenge = db.transaction((tx) => {
       tx.update(usersTable)
         .set({ balance: sql`${usersTable.balance} - ${bAmt}` })
-        .where(eq(usersTable.id, user.id));
+        .where(eq(usersTable.id, user.id))
+        .run();
 
       tx.insert(transactionsTable).values({
         userId: user.id,
         type: 'WAGER',
         amount: bAmt,
         status: 'COMPLETED',
-      });
+      }).run();
 
       const creatorResult = Math.floor(Math.random() * (gType === 'DICE' ? 6 : 10)) + 1;
       const newCh = tx.insert(challengesTable).values({

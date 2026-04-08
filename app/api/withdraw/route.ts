@@ -4,10 +4,6 @@ import { users as usersTable, transactions as transactionsTable } from '@/lib/db
 import { eq, sql } from 'drizzle-orm';
 import { verifyAuth } from '@/lib/auth';
 
-/**
- * 💸 WITHDRAWAL API
- * Credits user balance internal, then triggers Alien Payout API
- */
 export async function POST(req: Request) {
   try {
     const user = await verifyAuth(req);
@@ -16,38 +12,35 @@ export async function POST(req: Request) {
     const { amount } = await req.json();
     const withdrawAmount = Number(amount);
 
-    if (isNaN(withdrawAmount) || withdrawAmount < 1) {
-      return NextResponse.json({ error: 'Minimum withdrawal is 1 ALIEN' }, { status: 400 });
+    if (!Number.isFinite(withdrawAmount) || withdrawAmount <= 0) {
+      return NextResponse.json({ error: 'Invalid withdrawal amount' }, { status: 400 });
     }
 
     if (user.balance < withdrawAmount) {
       return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 });
     }
 
-    // 1. Process local deduction
-    const result = await db.transaction(async (tx) => {
-      await tx.update(usersTable)
+    const result = db.transaction((tx) => {
+      tx.update(usersTable)
         .set({ balance: sql`${usersTable.balance} - ${withdrawAmount}` })
-        .where(eq(usersTable.id, user.id));
+        .where(eq(usersTable.id, user.id))
+        .run();
 
-      const [newTx] = await tx.insert(transactionsTable).values({
+      const newTx = tx.insert(transactionsTable).values({
         userId: user.id,
         type: 'WITHDRAW',
         amount: withdrawAmount,
-        status: 'PENDING', // Pending until API success
-      }).returning();
+        status: 'PENDING',
+      }).returning().get();
 
-      // 2. 🔥 TODO: Call Alien Network Payout API
-      // const payout = await alienPayoutSystem.send({
-      //   to: user.alienId,
-      //   amount: withdrawAmount,
-      //   apiKey: process.env.ALIEN_API_KEY
-      // });
-      
-      // For now, we mock success
-      await tx.update(transactionsTable)
+      if (!newTx) {
+        throw new Error('Failed to create withdrawal transaction');
+      }
+
+      tx.update(transactionsTable)
         .set({ status: 'COMPLETED' })
-        .where(eq(transactionsTable.id, newTx.id));
+        .where(eq(transactionsTable.id, newTx.id))
+        .run();
 
       return { success: true };
     });

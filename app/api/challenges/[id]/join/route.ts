@@ -53,14 +53,15 @@ export async function POST(
     db.transaction((tx) => {
       tx.update(usersTable)
         .set({ balance: sql`${usersTable.balance} - ${challenge.betAmount}` })
-        .where(eq(usersTable.id, user.id));
+        .where(eq(usersTable.id, user.id))
+        .run();
 
       tx.insert(transactionsTable).values({
         userId: user.id,
         type: 'WAGER',
         amount: challenge.betAmount,
         status: 'COMPLETED',
-      });
+      }).run();
 
       tx.update(challengesTable)
         .set({
@@ -70,20 +71,22 @@ export async function POST(
           status: 'FINISHED',
           updatedAt: new Date(),
         })
-        .where(eq(challengesTable.id, id));
+        .where(eq(challengesTable.id, id))
+        .run();
 
       const winner = tx.select().from(usersTable).where(eq(usersTable.alienId, winnerAddress)).get();
       if (winner) {
         tx.update(usersTable)
           .set({ balance: sql`${usersTable.balance} + ${totalPrize}` })
-          .where(eq(usersTable.id, winner.id));
+          .where(eq(usersTable.id, winner.id))
+          .run();
 
         tx.insert(transactionsTable).values({
           userId: winner.id,
           type: 'WIN',
           amount: totalPrize,
           status: 'COMPLETED',
-        });
+        }).run();
       }
     });
 

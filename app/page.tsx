@@ -41,7 +41,7 @@ export default function Lobby() {
 
   const [isDepositOpen, setIsDepositOpen] = useState(false);
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
-  const [amount, setAmount] = useState('100');
+  const [amount, setAmount] = useState('1');
 
   const { data: challenges, isLoading } = useQuery<Challenge[]>({
     queryKey: ['challenges'],
@@ -404,6 +404,9 @@ export default function Lobby() {
                    <ArrowDownLeft className="w-8 h-8 text-white" />
                 </div>
                 <h3 className="text-2xl font-black italic uppercase tracking-tighter">Deposit ALIEN</h3>
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/35">
+                  Any amount above 0 is allowed
+                </p>
               </div>
 
               <div className="space-y-4">
@@ -417,7 +420,7 @@ export default function Lobby() {
                 </div>
 
                 <div className="grid grid-cols-3 gap-2">
-                   {['100', '500', '1000'].map(val => (
+                   {['0.1', '1', '10'].map(val => (
                     <button key={val} onClick={() => { setAmount(val); impactOccurred('light'); }} className="p-3 bg-white/5 rounded-xl text-[10px] font-black hover:bg-white/10 transition-colors uppercase">
                       {val}
                     </button>
@@ -452,6 +455,9 @@ export default function Lobby() {
                   <ArrowUpRight className="w-8 h-8 text-white" />
                 </div>
                 <h3 className="text-2xl font-black italic uppercase tracking-tighter">Withdraw</h3>
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/35">
+                  Any amount above 0 is allowed
+                </p>
               </div>
 
               <div className="space-y-4">
