@@ -50,21 +50,19 @@ export async function POST(
     // 3. Atomic Transaction: Deduct joiner, credit winner, update challenge
     const totalPrize = Number(challenge.betAmount) * 1.8; // 90% of total pool (2x bet)
 
-    await db.transaction(async (tx) => {
-      // A. Deduct joiner balance
-      await tx.update(usersTable)
+    db.transaction((tx) => {
+      tx.update(usersTable)
         .set({ balance: sql`${usersTable.balance} - ${challenge.betAmount}` })
         .where(eq(usersTable.id, user.id));
 
-      await tx.insert(transactionsTable).values({
+      tx.insert(transactionsTable).values({
         userId: user.id,
         type: 'WAGER',
         amount: challenge.betAmount,
         status: 'COMPLETED',
       });
 
-      // B. Update challenge status
-      await tx.update(challengesTable)
+      tx.update(challengesTable)
         .set({
           joinerAddress: user.alienId,
           joinerResult,
@@ -74,14 +72,13 @@ export async function POST(
         })
         .where(eq(challengesTable.id, id));
 
-      // C. Credit winner balance
-      const [winner] = await tx.select().from(usersTable).where(eq(usersTable.alienId, winnerAddress)).limit(1);
+      const winner = tx.select().from(usersTable).where(eq(usersTable.alienId, winnerAddress)).get();
       if (winner) {
-        await tx.update(usersTable)
+        tx.update(usersTable)
           .set({ balance: sql`${usersTable.balance} + ${totalPrize}` })
           .where(eq(usersTable.id, winner.id));
 
-        await tx.insert(transactionsTable).values({
+        tx.insert(transactionsTable).values({
           userId: winner.id,
           type: 'WIN',
           amount: totalPrize,

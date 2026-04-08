@@ -3,7 +3,7 @@
 import { useAlien, useHaptic, usePayment } from '@alien-id/miniapps-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Dice6, Trophy, Users, Zap, ChevronRight, Wallet, ArrowDownLeft, ArrowUpRight, History, Loader2, Plus } from 'lucide-react';
+import { Dice6, Trophy, Users, Zap, ChevronRight, Wallet, ArrowDownLeft, ArrowUpRight, History, Loader2, Swords, CircleAlert } from 'lucide-react';
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -20,6 +20,7 @@ interface Challenge {
 interface UserProfile {
   id: string;
   alienId: string;
+  username?: string | null;
   balance: number;
 }
 
@@ -27,10 +28,12 @@ interface Transaction {
   id: string;
   type: string;
   amount: number;
+  status: string;
   createdAt: string;
 }
 
 export default function Lobby() {
+  const MIN_CHALLENGE_BALANCE = 100;
   const { authToken } = useAlien();
   const { impactOccurred, notificationOccurred } = useHaptic();
   const { pay, supported: isPaymentSupported } = usePayment();
@@ -160,6 +163,10 @@ export default function Lobby() {
     }
   });
 
+  const balance = profile?.balance ?? 0;
+  const balanceDisplay = balance.toFixed(1);
+  const needsMoreBalanceForChallenge = balance > 0 && balance < MIN_CHALLENGE_BALANCE;
+
   return (
     <div className="space-y-6 pb-24">
       {/* Hero Section with Unified Wallet Actions */}
@@ -191,7 +198,10 @@ export default function Lobby() {
                </div>
                <div>
                  <div className="text-[8px] font-black text-blue-200 uppercase tracking-widest leading-none mb-1">Total Balance</div>
-                 <div className="text-lg font-black text-white italic leading-none">{profile?.balance?.toFixed(1) || '0.0'} <span className="text-[10px] font-medium opacity-60">ALIEN</span></div>
+                 <div className="text-lg font-black text-white italic leading-none">{balanceDisplay} <span className="text-[10px] font-medium opacity-60">ALIEN</span></div>
+                 <div className="mt-1 text-[9px] font-bold uppercase tracking-[0.22em] text-blue-100/60">
+                   {profile?.username || 'Unnamed Pilot'}
+                 </div>
                </div>
              </div>
            </div>
@@ -212,6 +222,43 @@ export default function Lobby() {
            </div>
         </div>
       </section>
+
+      {needsMoreBalanceForChallenge && (
+        <div className="rounded-3xl border border-amber-400/20 bg-amber-500/10 p-4">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 rounded-xl bg-amber-400/10 p-2">
+              <CircleAlert className="h-4 w-4 text-amber-300" />
+            </div>
+            <div className="space-y-1">
+              <div className="text-[10px] font-black uppercase tracking-widest text-amber-200">
+                Deposit Sudah Masuk
+              </div>
+              <p className="text-sm font-medium text-amber-50/80">
+                Saldo kamu sekarang {balanceDisplay} ALIEN, tapi minimum untuk bikin challenge masih {MIN_CHALLENGE_BALANCE} ALIEN.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Link href="/create">
+        <div className="group relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 transition-all hover:border-blue-500/40 hover:bg-blue-500/10">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 shadow-lg shadow-blue-500/20">
+                <Swords className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-blue-300">Create Challenge</div>
+                <div className="text-sm font-medium text-white/70">
+                  Launch a new duel using your internal ALIEN balance.
+                </div>
+              </div>
+            </div>
+            <ChevronRight className="h-5 w-5 text-white/30 transition-all group-hover:translate-x-1 group-hover:text-blue-300" />
+          </div>
+        </div>
+      </Link>
 
       {/* Stats row */}
       <div className="grid grid-cols-2 gap-4">
@@ -436,18 +483,6 @@ export default function Lobby() {
         )}
       </AnimatePresence>
 
-      {/* Floating Create Button */}
-      <div className="fixed bottom-24 right-6 z-50">
-        <Link href="/create">
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            className="w-14 h-14 bg-blue-600 rounded-full shadow-2xl flex items-center justify-center border-4 border-[#0a0a0c]"
-          >
-            <Plus className="w-7 h-7 text-white" />
-          </motion.button>
-        </Link>
-      </div>
     </div>
   );
 }

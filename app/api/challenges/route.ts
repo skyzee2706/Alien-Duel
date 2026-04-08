@@ -32,29 +32,26 @@ export async function POST(req: Request) {
     if (user.balance < bAmt) return NextResponse.json({ error: 'Low balance' }, { status: 400 });
 
     // Execute atomic transaction for challenge creation
-    const challenge = await db.transaction(async (tx) => {
-      // 1. Deduct balance
-      await tx.update(usersTable)
+    const challenge = db.transaction((tx) => {
+      tx.update(usersTable)
         .set({ balance: sql`${usersTable.balance} - ${bAmt}` })
         .where(eq(usersTable.id, user.id));
 
-      // 2. Record Wager Transaction
-      await tx.insert(transactionsTable).values({
+      tx.insert(transactionsTable).values({
         userId: user.id,
         type: 'WAGER',
         amount: bAmt,
         status: 'COMPLETED',
       });
 
-      // 3. Create challenge with creator result
       const creatorResult = Math.floor(Math.random() * (gType === 'DICE' ? 6 : 10)) + 1;
-      const [newCh] = await tx.insert(challengesTable).values({
+      const newCh = tx.insert(challengesTable).values({
         creatorAddress: user.alienId,
         gameType: gType,
         betAmount: bAmt,
         creatorResult,
         status: 'OPEN',
-      }).returning();
+      }).returning().get();
 
       return newCh;
     });

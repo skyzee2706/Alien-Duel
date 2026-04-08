@@ -22,10 +22,18 @@ export async function POST(req: Request) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { username } = await req.json();
-    if (!username) return NextResponse.json({ error: 'Missing username' }, { status: 400 });
+    const nextUsername = typeof username === 'string' ? username.trim() : '';
+
+    if (!nextUsername) {
+      return NextResponse.json({ error: 'Missing username' }, { status: 400 });
+    }
+
+    if (nextUsername.length > 24) {
+      return NextResponse.json({ error: 'Username max 24 characters' }, { status: 400 });
+    }
 
     const [updatedUser] = await db.update(usersTable)
-      .set({ username, updatedAt: new Date() })
+      .set({ username: nextUsername, updatedAt: new Date() })
       .where(eq(usersTable.id, user.id))
       .returning();
 

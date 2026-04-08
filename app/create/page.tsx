@@ -36,6 +36,8 @@ export default function CreateChallenge() {
       return res.json();
     },
     enabled: !!authToken,
+    refetchInterval: authToken ? 5000 : false,
+    refetchIntervalInBackground: true,
   });
 
   const handleCreate = async () => {
@@ -99,6 +101,9 @@ export default function CreateChallenge() {
         </div>
         <div className="font-black italic text-white">{profile?.balance?.toFixed(1) || '0.0'} ALIEN</div>
       </div>
+      <p className="text-[10px] font-bold uppercase tracking-widest text-white/25 px-1">
+        Minimum challenge is 100 ALIEN.
+      </p>
 
       {/* Game Type Selection */}
       <div className="space-y-4">

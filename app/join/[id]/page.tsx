@@ -56,6 +56,8 @@ export default function JoinChallenge() {
       return res.json();
     },
     enabled: !!authToken,
+    refetchInterval: authToken ? 5000 : false,
+    refetchIntervalInBackground: true,
   });
 
   const handleJoin = async () => {

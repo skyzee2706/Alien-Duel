@@ -1,0 +1,3 @@
+{
+  "/api/challenges/[id]/join/route": "app/api/challenges/[id]/join/route.js"
+}
