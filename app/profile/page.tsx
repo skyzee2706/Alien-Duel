@@ -108,12 +108,12 @@ export default function ProfilePage() {
   const username = usernameDraft ?? (profile?.username ?? '');
   const challengeHint = useMemo(() => {
     if (balance <= 0) {
-      return 'Belum ada saldo internal yang siap dipakai.';
+      return 'No internal balance is available yet.';
     }
     if (balance < MIN_CHALLENGE_BALANCE) {
-      return `Saldo sudah masuk, tapi belum cukup untuk minimum challenge ${MIN_CHALLENGE_BALANCE} ALIEN.`;
+      return `Your deposit has arrived, but it is still below the ${MIN_CHALLENGE_BALANCE} ALIEN minimum required to create a challenge.`;
     }
-    return 'Saldo internal kamu sudah cukup untuk membuat challenge baru.';
+    return 'Your internal balance is ready to create a new challenge.';
   }, [balance]);
 
   const copyValue = async (label: string, value: string) => {
@@ -149,13 +149,13 @@ export default function ProfilePage() {
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-2">
             <div className="text-[10px] font-black uppercase tracking-[0.24em] text-blue-300">
-              Pilot Profile
+              Player Profile
             </div>
             <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white">
-              {profile.username || 'Unnamed Pilot'}
+              {profile.username || 'Unnamed Player'}
             </h2>
             <p className="text-sm font-medium text-white/55">
-              Semua data ini dibaca dari user yang sedang login di Alien Mini App.
+              This data is loaded from the currently authenticated Alien Mini App user.
             </p>
           </div>
           <div className="rounded-[1.5rem] bg-white/10 p-4">
@@ -205,7 +205,7 @@ export default function ProfilePage() {
           </button>
         </div>
         <p className="text-xs font-medium text-white/35">
-          Maksimal 24 karakter. Username ini tersimpan untuk user Alien yang sedang login.
+          Maximum 24 characters. This username is saved for the currently signed-in Alien user.
         </p>
       </section>
 
@@ -271,7 +271,7 @@ export default function ProfilePage() {
 
           {!transactions?.length && (
             <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm font-medium text-white/35">
-              Belum ada transaksi untuk user ini.
+              No transactions have been recorded for this user yet.
             </div>
           )}
         </div>

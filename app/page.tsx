@@ -200,7 +200,7 @@ export default function Lobby() {
                  <div className="text-[8px] font-black text-blue-200 uppercase tracking-widest leading-none mb-1">Total Balance</div>
                  <div className="text-lg font-black text-white italic leading-none">{balanceDisplay} <span className="text-[10px] font-medium opacity-60">ALIEN</span></div>
                  <div className="mt-1 text-[9px] font-bold uppercase tracking-[0.22em] text-blue-100/60">
-                   {profile?.username || 'Unnamed Pilot'}
+                   {profile?.username || 'Unnamed Player'}
                  </div>
                </div>
              </div>
@@ -231,10 +231,10 @@ export default function Lobby() {
             </div>
             <div className="space-y-1">
               <div className="text-[10px] font-black uppercase tracking-widest text-amber-200">
-                Deposit Sudah Masuk
+                Deposit Received
               </div>
               <p className="text-sm font-medium text-amber-50/80">
-                Saldo kamu sekarang {balanceDisplay} ALIEN, tapi minimum untuk bikin challenge masih {MIN_CHALLENGE_BALANCE} ALIEN.
+                Your balance is now {balanceDisplay} ALIEN, but the minimum to create a challenge is still {MIN_CHALLENGE_BALANCE} ALIEN.
               </p>
             </div>
           </div>
@@ -318,7 +318,7 @@ export default function Lobby() {
                         </div>
                         <div>
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-[10px] font-black text-blue-400 uppercase tracking-tighter">{challenge.gameType === 'DICE' ? 'Dice Duel' : 'Lucky Num'}</span>
+                            <span className="text-[10px] font-black text-blue-400 uppercase tracking-tighter">{challenge.gameType === 'DICE' ? 'Dice Duel' : 'Lucky Number'}</span>
                           </div>
                           <div className="flex items-baseline gap-1">
                             <span className="text-2xl font-black text-white italic tracking-tight">{challenge.betAmount}</span>
