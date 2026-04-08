@@ -458,6 +458,9 @@ export default function Lobby() {
                 <p className="text-[10px] font-black uppercase tracking-widest text-white/35">
                   Any amount above 0 is allowed
                 </p>
+                <p className="text-xs font-medium text-white/45">
+                  On-chain wallet payout is not live yet.
+                </p>
               </div>
 
               <div className="space-y-4">
